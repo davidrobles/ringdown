@@ -4,7 +4,8 @@ import chalk from 'chalk';
 import { runAuth } from './auth.js';
 import { runSync } from './sync.js';
 import { runDownload } from './downloader.js';
-import { getStats, getRecentEvents, getDevices } from './db.js';
+import { getStats, getRecentEvents, getDevices, getDownloadedFilePaths } from './db.js';
+import fs from 'fs-extra';
 import { loadConfig } from './config.js';
 
 const program = new Command();
@@ -114,6 +115,49 @@ program
     for (const d of devices) {
       console.log(`  ${chalk.bold(d.name)}  ${chalk.dim(d.kind)}  ${chalk.dim(`(${d.id})`)}`);
     }
+    console.log('');
+  });
+
+// ─── storage ─────────────────────────────────────────────────────────────────
+
+program
+  .command('storage')
+  .description('Show disk usage breakdown by camera')
+  .action(() => {
+    const rows = getDownloadedFilePaths();
+
+    const byCamera = new Map<string, { count: number; bytes: number }>();
+
+    for (const { device_name, file_path } of rows) {
+      const resolved = file_path.replace(/^~/, process.env.HOME ?? '~');
+      let size = 0;
+      try { size = fs.statSync(resolved).size; } catch { /* file missing */ }
+
+      const entry = byCamera.get(device_name) ?? { count: 0, bytes: 0 };
+      entry.count++;
+      entry.bytes += size;
+      byCamera.set(device_name, entry);
+    }
+
+    const fmt = (bytes: number) => {
+      if (bytes >= 1e9) return `${(bytes / 1e9).toFixed(1)} GB`;
+      if (bytes >= 1e6) return `${(bytes / 1e6).toFixed(1)} MB`;
+      return `${(bytes / 1e3).toFixed(1)} KB`;
+    };
+
+    const sorted = [...byCamera.entries()].sort((a, b) => b[1].bytes - a[1].bytes);
+    const totalBytes = sorted.reduce((sum, [, v]) => sum + v.bytes, 0);
+    const totalCount = sorted.reduce((sum, [, v]) => sum + v.count, 0);
+    const nameWidth = Math.max(...sorted.map(([k]) => k.length), 6);
+
+    console.log('');
+    console.log(`  ${'Camera'.padEnd(nameWidth)}   ${'Videos'.padStart(7)}   ${'Size'.padStart(8)}`);
+    console.log(`  ${'─'.repeat(nameWidth + 22)}`);
+    for (const [name, { count, bytes }] of sorted) {
+      console.log(`  ${chalk.bold(name.padEnd(nameWidth))}   ${String(count).padStart(7)}   ${chalk.cyan(fmt(bytes).padStart(8))}`);
+    }
+    console.log(`  ${'─'.repeat(nameWidth + 22)}`);
+    console.log(`  ${'Total'.padEnd(nameWidth)}   ${String(totalCount).padStart(7)}   ${chalk.green(fmt(totalBytes).padStart(8))}`);
     console.log('');
   });
 

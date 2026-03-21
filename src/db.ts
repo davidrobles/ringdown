@@ -171,6 +171,12 @@ export function getEventById(id: string): DbEvent | null {
   return (getDb().prepare(`SELECT * FROM events WHERE id = ?`).get(id) as DbEvent | undefined) ?? null;
 }
 
+export function getDownloadedFilePaths(): { device_name: string; file_path: string }[] {
+  return getDb()
+    .prepare(`SELECT device_name, file_path FROM events WHERE downloaded = 1 AND file_path IS NOT NULL`)
+    .all() as { device_name: string; file_path: string }[];
+}
+
 export function toggleFavorite(id: string): { favorited: number } {
   const db = getDb();
   db.prepare(`UPDATE events SET favorited = CASE WHEN favorited = 1 THEN 0 ELSE 1 END WHERE id = ?`).run(id);
