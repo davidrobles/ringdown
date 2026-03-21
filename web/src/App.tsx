@@ -18,14 +18,14 @@ const DEFAULT_FILTERS: Filters = {
 };
 
 export default function App() {
-  const [devices, setDevices]     = useState<Device[]>([]);
-  const [events, setEvents]       = useState<Event[]>([]);
-  const [total, setTotal]         = useState(0);
-  const [stats, setStats]         = useState<Stats | null>(null);
-  const [filters, setFilters]     = useState<Filters>(DEFAULT_FILTERS);
-  const [offset, setOffset]       = useState(0);
-  const [loading, setLoading]     = useState(false);
-  const [selected, setSelected]   = useState<Event | null>(null);
+  const [devices, setDevices]         = useState<Device[]>([]);
+  const [events, setEvents]           = useState<Event[]>([]);
+  const [total, setTotal]             = useState(0);
+  const [stats, setStats]             = useState<Stats | null>(null);
+  const [filters, setFilters]         = useState<Filters>(DEFAULT_FILTERS);
+  const [offset, setOffset]           = useState(0);
+  const [loading, setLoading]         = useState(false);
+  const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
 
   useEffect(() => {
     fetchDevices().then(setDevices);
@@ -52,7 +52,6 @@ export default function App() {
   const handleReset = () => setFilters(DEFAULT_FILTERS);
 
   const handleFavorite = async (eventId: string) => {
-    // Optimistic update
     setEvents(prev => prev.map(e =>
       e.id === eventId ? { ...e, favorited: e.favorited ? 0 : 1 } : e
     ));
@@ -60,7 +59,6 @@ export default function App() {
       const { favorited } = await toggleFavorite(eventId);
       setEvents(prev => prev.map(e => e.id === eventId ? { ...e, favorited } : e));
     } catch {
-      // Revert on failure
       setEvents(prev => prev.map(e =>
         e.id === eventId ? { ...e, favorited: e.favorited ? 0 : 1 } : e
       ));
@@ -74,6 +72,25 @@ export default function App() {
   };
 
   const hasMore = events.length < total;
+
+  const handlePrev = useCallback(() => {
+    setSelectedIdx(i => (i !== null && i > 0 ? i - 1 : i));
+  }, []);
+
+  const handleNext = useCallback(() => {
+    setSelectedIdx(i => {
+      if (i === null) return i;
+      // Auto-load more if approaching the end
+      if (i >= events.length - 3 && hasMore) {
+        const next = offset + PAGE_SIZE;
+        setOffset(next);
+        load(filters, next);
+      }
+      return i < events.length - 1 ? i + 1 : i;
+    });
+  }, [events.length, hasMore, offset, filters, load]);
+
+  const selectedEvent = selectedIdx !== null ? (events[selectedIdx] ?? null) : null;
 
   return (
     <div className="flex h-screen bg-zinc-950 text-zinc-100 overflow-hidden">
@@ -99,8 +116,8 @@ export default function App() {
           ) : (
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                {events.map((e) => (
-                  <EventCard key={e.id} event={e} onClick={() => setSelected(e)} onFavorite={handleFavorite} />
+                {events.map((e, i) => (
+                  <EventCard key={e.id} event={e} onClick={() => setSelectedIdx(i)} onFavorite={handleFavorite} />
                 ))}
               </div>
 
@@ -120,10 +137,14 @@ export default function App() {
         </main>
       </div>
 
-      {selected && (
+      {selectedEvent && (
         <VideoPlayer
-          event={events.find(e => e.id === selected.id) ?? selected}
-          onClose={() => setSelected(null)}
+          event={events.find(e => e.id === selectedEvent.id) ?? selectedEvent}
+          hasPrev={selectedIdx !== null && selectedIdx > 0}
+          hasNext={selectedIdx !== null && (selectedIdx < events.length - 1 || hasMore)}
+          onPrev={handlePrev}
+          onNext={handleNext}
+          onClose={() => setSelectedIdx(null)}
           onFavorite={handleFavorite}
         />
       )}

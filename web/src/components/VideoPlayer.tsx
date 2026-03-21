@@ -4,20 +4,30 @@ import { videoUrl } from '../api.ts';
 
 interface Props {
   event: Event;
+  hasPrev: boolean;
+  hasNext: boolean;
+  onPrev: () => void;
+  onNext: () => void;
   onClose: () => void;
   onFavorite: (id: string) => void;
 }
 
-export default function VideoPlayer({ event, onClose, onFavorite }: Props) {
+export default function VideoPlayer({ event, hasPrev, hasNext, onPrev, onNext, onClose, onFavorite }: Props) {
   const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose(); };
+    const handler = (e: KeyboardEvent) => {
+      if (e.key === 'Escape')     onClose();
+      if (e.key === 'ArrowLeft')  { e.preventDefault(); if (hasPrev) onPrev(); }
+      if (e.key === 'ArrowRight') { e.preventDefault(); if (hasNext) onNext(); }
+    };
     window.addEventListener('keydown', handler);
     return () => window.removeEventListener('keydown', handler);
-  }, [onClose]);
+  }, [onClose, onPrev, onNext, hasPrev, hasNext]);
 
   const date = new Date(event.created_at * 1000);
+
+  const navBtn = 'absolute top-1/2 -translate-y-1/2 flex items-center justify-center w-10 h-10 rounded-full bg-black/50 hover:bg-black/80 text-white transition-colors disabled:opacity-20 disabled:cursor-not-allowed';
 
   return (
     <div
@@ -25,6 +35,18 @@ export default function VideoPlayer({ event, onClose, onFavorite }: Props) {
       className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-6"
       onClick={(e) => { if (e.target === backdropRef.current) onClose(); }}
     >
+      {/* Prev arrow */}
+      <button
+        onClick={onPrev}
+        disabled={!hasPrev}
+        aria-label="Previous video"
+        className={`${navBtn} left-4`}
+      >
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M15.75 19.5 8.25 12l7.5-7.5" />
+        </svg>
+      </button>
+
       <div className="bg-zinc-900 rounded-xl overflow-hidden w-full max-w-4xl shadow-2xl">
         {/* Header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-zinc-800">
@@ -63,6 +85,7 @@ export default function VideoPlayer({ event, onClose, onFavorite }: Props) {
         <div className="bg-black">
           {event.downloaded ? (
             <video
+              key={event.id}
               src={videoUrl(event.id)}
               controls
               autoPlay
@@ -75,6 +98,18 @@ export default function VideoPlayer({ event, onClose, onFavorite }: Props) {
           )}
         </div>
       </div>
+
+      {/* Next arrow */}
+      <button
+        onClick={onNext}
+        disabled={!hasNext}
+        aria-label="Next video"
+        className={`${navBtn} right-4`}
+      >
+        <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="m8.25 4.5 7.5 7.5-7.5 7.5" />
+        </svg>
+      </button>
     </div>
   );
 }
