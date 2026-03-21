@@ -5,6 +5,7 @@ import { runAuth } from './auth.js';
 import { runSync } from './sync.js';
 import { runDownload } from './downloader.js';
 import { getStats, getRecentEvents, getDevices } from './db.js';
+import { loadConfig } from './config.js';
 
 const program = new Command();
 
@@ -116,8 +117,24 @@ program
     console.log('');
   });
 
+// ─── serve ───────────────────────────────────────────────────────────────────
+
+program
+  .command('serve')
+  .description('Start the web UI to browse and watch videos')
+  .option('-p, --port <number>', 'Port to listen on', '3000')
+  .action(async (opts) => {
+    const { startServer } = await import('./server/index.js');
+    const config = loadConfig();
+    const port = parseInt(opts.port, 10);
+    await startServer(port, config.outputDir);
+    // Don't exit — keep the server running
+  });
+
 program.parseAsync(process.argv)
-  .then(() => process.exit(0))
+  .then(() => {
+    if (process.argv[2] !== 'serve') process.exit(0);
+  })
   .catch((err) => {
     console.error(chalk.red('\nError:'), err?.message ?? err);
     process.exit(1);

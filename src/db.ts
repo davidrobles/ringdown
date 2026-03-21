@@ -105,3 +105,39 @@ export function getDevices(): DbDevice[] {
     .prepare(`SELECT * FROM devices ORDER BY name`)
     .all() as DbDevice[];
 }
+
+export interface EventsQuery {
+  device_id?: string;
+  kind?: string;
+  downloaded?: number;
+  dateFrom?: number;
+  dateTo?: number;
+  limit?: number;
+  offset?: number;
+}
+
+export function queryEvents(q: EventsQuery): { events: DbEvent[]; total: number } {
+  const db = getDb();
+  const conditions: string[] = [];
+  const params: Record<string, string | number> = {};
+
+  if (q.device_id) { conditions.push('device_id = @device_id'); params.device_id = q.device_id; }
+  if (q.kind)      { conditions.push('kind = @kind');           params.kind = q.kind; }
+  if (q.downloaded !== undefined) { conditions.push('downloaded = @downloaded'); params.downloaded = q.downloaded; }
+  if (q.dateFrom)  { conditions.push('created_at >= @dateFrom'); params.dateFrom = q.dateFrom; }
+  if (q.dateTo)    { conditions.push('created_at <= @dateTo');   params.dateTo = q.dateTo; }
+
+  const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
+  const limit = q.limit ?? 50;
+  const offset = q.offset ?? 0;
+
+  const total = (db.prepare(`SELECT COUNT(*) as n FROM events ${where}`).get(params) as { n: number }).n;
+  const events = db.prepare(`SELECT * FROM events ${where} ORDER BY created_at DESC LIMIT @limit OFFSET @offset`)
+    .all({ ...params, limit, offset }) as DbEvent[];
+
+  return { events, total };
+}
+
+export function getEventById(id: string): DbEvent | null {
+  return (getDb().prepare(`SELECT * FROM events WHERE id = ?`).get(id) as DbEvent | undefined) ?? null;
+}
