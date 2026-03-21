@@ -9,7 +9,7 @@ import StatusBar from './components/StatusBar.tsx';
 const PAGE_SIZE = 48;
 
 const DEFAULT_FILTERS: Filters = {
-  device_id: '',
+  device_ids: [],
   kind: '',
   downloaded: '',
   date_from: '',

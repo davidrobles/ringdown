@@ -44,15 +44,18 @@ export async function startServer(port: number, outputDir: string): Promise<void
   });
 
   app.get('/api/events', async (req) => {
-    const q = req.query as Record<string, string>;
+    const q = req.query as Record<string, string | string[]>;
+    const deviceIds = q.device_id
+      ? (Array.isArray(q.device_id) ? q.device_id : [q.device_id]).filter(Boolean)
+      : [];
     return queryEvents({
-      device_id: q.device_id || undefined,
-      kind:      q.kind || undefined,
-      downloaded: q.downloaded !== undefined ? Number(q.downloaded) : undefined,
-      dateFrom:  q.date_from ? Number(q.date_from) : undefined,
-      dateTo:    q.date_to   ? Number(q.date_to)   : undefined,
-      limit:     q.limit     ? Number(q.limit)     : 50,
-      offset:    q.offset    ? Number(q.offset)    : 0,
+      device_ids: deviceIds.length ? deviceIds : undefined,
+      kind:       typeof q.kind === 'string' ? q.kind || undefined : undefined,
+      downloaded: typeof q.downloaded === 'string' && q.downloaded !== '' ? Number(q.downloaded) : undefined,
+      dateFrom:   typeof q.date_from === 'string' && q.date_from ? Number(q.date_from) : undefined,
+      dateTo:     typeof q.date_to   === 'string' && q.date_to   ? Number(q.date_to)   : undefined,
+      limit:      typeof q.limit     === 'string' && q.limit     ? Number(q.limit)     : 50,
+      offset:     typeof q.offset    === 'string' && q.offset    ? Number(q.offset)    : 0,
     });
   });
 

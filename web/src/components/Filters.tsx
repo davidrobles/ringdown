@@ -15,6 +15,13 @@ export default function FiltersPanel({ filters, devices, onChange, onReset }: Pr
   const set = (key: keyof Filters) => (e: React.ChangeEvent<HTMLSelectElement | HTMLInputElement>) =>
     onChange({ ...filters, [key]: e.target.value });
 
+  const toggleDevice = (id: string) => {
+    const next = filters.device_ids.includes(id)
+      ? filters.device_ids.filter(d => d !== id)
+      : [...filters.device_ids, id];
+    onChange({ ...filters, device_ids: next });
+  };
+
   return (
     <aside className="w-64 shrink-0 flex flex-col gap-5 p-5 bg-zinc-900 border-r border-zinc-800 h-full overflow-y-auto">
       <div>
@@ -24,13 +31,30 @@ export default function FiltersPanel({ filters, devices, onChange, onReset }: Pr
 
       <div className="flex flex-col gap-4">
         <div>
-          <label className={label}>Camera</label>
-          <select className={select} value={filters.device_id} onChange={set('device_id')}>
-            <option value="">All cameras</option>
+          <div className="flex items-center justify-between mb-1">
+            <label className={label} style={{ marginBottom: 0 }}>Camera</label>
+            {filters.device_ids.length > 0 && (
+              <button
+                onClick={() => onChange({ ...filters, device_ids: [] })}
+                className="text-xs text-zinc-500 hover:text-zinc-300 transition-colors"
+              >
+                Clear
+              </button>
+            )}
+          </div>
+          <div className="flex flex-col gap-1.5 mt-1.5">
             {devices.map((d) => (
-              <option key={d.id} value={d.id}>{d.name}</option>
+              <label key={d.id} className="flex items-center gap-2 cursor-pointer group">
+                <input
+                  type="checkbox"
+                  checked={filters.device_ids.includes(d.id)}
+                  onChange={() => toggleDevice(d.id)}
+                  className="accent-blue-500 w-3.5 h-3.5 shrink-0"
+                />
+                <span className="text-sm text-zinc-300 group-hover:text-white transition-colors truncate">{d.name}</span>
+              </label>
             ))}
-          </select>
+          </div>
         </div>
 
         <div>

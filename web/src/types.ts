@@ -29,7 +29,7 @@ export interface Stats {
 }
 
 export interface Filters {
-  device_id: string;
+  device_ids: string[];
   kind: string;
   downloaded: string;
   date_from: string;

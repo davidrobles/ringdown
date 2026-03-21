@@ -18,7 +18,7 @@ export async function fetchEvents(
   offset = 0
 ): Promise<EventsResponse> {
   const params = new URLSearchParams();
-  if (filters.device_id)  params.set('device_id',  filters.device_id);
+  if (filters.device_ids?.length) filters.device_ids.forEach(id => params.append('device_id', id));
   if (filters.kind)        params.set('kind',        filters.kind);
   if (filters.downloaded !== undefined && filters.downloaded !== '')
                            params.set('downloaded',  filters.downloaded);

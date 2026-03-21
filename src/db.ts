@@ -125,7 +125,7 @@ export function getDevices(): DbDevice[] {
 }
 
 export interface EventsQuery {
-  device_id?: string;
+  device_ids?: string[];
   kind?: string;
   downloaded?: number;
   dateFrom?: number;
@@ -139,7 +139,11 @@ export function queryEvents(q: EventsQuery): { events: DbEvent[]; total: number 
   const conditions: string[] = [];
   const params: Record<string, string | number> = {};
 
-  if (q.device_id) { conditions.push('device_id = @device_id'); params.device_id = q.device_id; }
+  if (q.device_ids?.length) {
+    const placeholders = q.device_ids.map((_, i) => `@did${i}`).join(', ');
+    conditions.push(`device_id IN (${placeholders})`);
+    q.device_ids.forEach((id, i) => { params[`did${i}`] = id; });
+  }
   if (q.kind)      { conditions.push('kind = @kind');           params.kind = q.kind; }
   if (q.downloaded !== undefined) { conditions.push('downloaded = @downloaded'); params.downloaded = q.downloaded; }
   if (q.dateFrom)  { conditions.push('created_at >= @dateFrom'); params.dateFrom = q.dateFrom; }
