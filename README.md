@@ -11,8 +11,12 @@ A CLI tool to automatically download Ring camera videos to your local machine �
 - Downloads only new videos — skips anything already saved
 - Organizes files by device and date: `{outputDir}/{device}/{YYYY-MM-DD}/{event_id}.mp4`
 - Works across all your Ring cameras and doorbells
-- **Web UI** — browse, filter by one or more cameras, and play videos in the browser via `ringdown serve`
+- **Web UI** — browse, filter by one or more cameras, date range, and event type; play videos inline via `ringdown serve`
 - **Thumbnails** — auto-generated via ffmpeg after each download, shown in the web UI
+- **Favorites** — heart any video from the grid or player; filter to favorites only
+- **Infinite scroll** — smoothly loads more events as you scroll
+- **Progress bar** — single bar showing download progress with per-camera status
+- **Storage stats** — `ringdown storage` shows disk usage broken down by camera
 
 ## Requirements
 
@@ -54,7 +58,7 @@ The main command. Syncs your event history from Ring, then downloads anything no
 ringdown serve
 ```
 
-Starts a local web server at `http://localhost:3000` with a video browser. Filter by one or more cameras, date range, and event type (motion/ding). Click any event to watch the video inline. Keeps running until you press `Ctrl+C`.
+Starts a local web server at `http://localhost:3000` with a video browser. Filter by one or more cameras, date range, event type (motion/ding), status, and favorites. Click any event to watch inline. Use left/right arrow keys (or buttons) to navigate between videos. Heart any video to favorite it. Keeps running until you press `Ctrl+C`.
 
 ```bash
 ringdown serve --port 8080   # Use a different port
@@ -67,6 +71,7 @@ ringdown sync        # Fetch new events from Ring into the local database
 ringdown download    # Download all events not yet saved to disk
 ringdown thumbnails  # Generate thumbnails for downloaded videos (requires ffmpeg)
 ringdown status      # Show counts: synced, downloaded, pending
+ringdown storage     # Show disk usage breakdown by camera
 ringdown list        # List recent events with download status
 ringdown ls-devices  # List all Ring devices on your account
 ```
