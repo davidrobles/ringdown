@@ -116,7 +116,9 @@ program
     console.log('');
   });
 
-program.parseAsync(process.argv).catch((err) => {
-  console.error(chalk.red('\nError:'), err?.message ?? err);
-  process.exit(1);
-});
+program.parseAsync(process.argv)
+  .then(() => process.exit(0))
+  .catch((err) => {
+    console.error(chalk.red('\nError:'), err?.message ?? err);
+    process.exit(1);
+  });
