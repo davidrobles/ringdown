@@ -7,6 +7,9 @@ dist/
 data/
 *.db
 
+# macOS
+.DS_Store
+
 # IDE
 .idea/
 
