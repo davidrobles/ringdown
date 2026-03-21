@@ -1,4 +1,5 @@
 import type { Event } from '../types.ts';
+import { thumbnailUrl } from '../api.ts';
 
 interface Props {
   event: Event;
@@ -20,9 +21,16 @@ export default function EventCard({ event, onClick }: Props) {
       onClick={onClick}
       className="group relative flex flex-col bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 rounded-xl overflow-hidden transition-all text-left"
     >
-      {/* Thumbnail placeholder */}
-      <div className="bg-zinc-900 aspect-video flex items-center justify-center relative">
-        {event.downloaded ? (
+      {/* Thumbnail */}
+      <div className="bg-zinc-900 aspect-video flex items-center justify-center relative overflow-hidden">
+        {event.thumbnail_path ? (
+          <img
+            src={thumbnailUrl(event.id)}
+            alt=""
+            className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-200"
+            loading="lazy"
+          />
+        ) : event.downloaded ? (
           <div className="flex flex-col items-center gap-2 text-zinc-500 group-hover:text-zinc-300 transition-colors">
             <svg className="w-10 h-10" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
               <path strokeLinecap="round" strokeLinejoin="round" d="M5.25 5.653c0-.856.917-1.398 1.667-.986l11.54 6.347a1.125 1.125 0 0 1 0 1.972l-11.54 6.347a1.125 1.125 0 0 1-1.667-.986V5.653Z" />

@@ -11,6 +11,7 @@ export interface DbEvent {
   downloaded: number;
   file_path: string | null;
   downloaded_at: number | null;
+  thumbnail_path: string | null;
 }
 
 export interface DbDevice {
@@ -53,6 +54,12 @@ function migrate(db: Database.Database): void {
     CREATE INDEX IF NOT EXISTS idx_events_created_at ON events (created_at);
     CREATE INDEX IF NOT EXISTS idx_events_device_id  ON events (device_id);
   `);
+
+  // v2: add thumbnail_path column if missing
+  const columns = (db.pragma('table_info(events)') as { name: string }[]).map(c => c.name);
+  if (!columns.includes('thumbnail_path')) {
+    db.exec(`ALTER TABLE events ADD COLUMN thumbnail_path TEXT`);
+  }
 }
 
 export function upsertDevice(device: DbDevice): void {
@@ -64,7 +71,7 @@ export function upsertDevice(device: DbDevice): void {
   `).run(device);
 }
 
-export function upsertEvent(event: Omit<DbEvent, 'downloaded' | 'file_path' | 'downloaded_at'>): void {
+export function upsertEvent(event: Omit<DbEvent, 'downloaded' | 'file_path' | 'downloaded_at' | 'thumbnail_path'>): void {
   const db = getDb();
   db.prepare(`
     INSERT INTO events (id, device_id, device_name, kind, created_at, duration)
@@ -85,6 +92,17 @@ export function markDownloaded(id: string, filePath: string): void {
     SET downloaded = 1, file_path = @filePath, downloaded_at = @now
     WHERE id = @id
   `).run({ id, filePath, now: Math.floor(Date.now() / 1000) });
+}
+
+export function markThumbnailed(id: string, thumbnailPath: string): void {
+  getDb().prepare(`UPDATE events SET thumbnail_path = @thumbnailPath WHERE id = @id`)
+    .run({ id, thumbnailPath });
+}
+
+export function getEventsWithoutThumbnails(): DbEvent[] {
+  return getDb()
+    .prepare(`SELECT * FROM events WHERE downloaded = 1 AND file_path IS NOT NULL AND thumbnail_path IS NULL ORDER BY created_at DESC`)
+    .all() as DbEvent[];
 }
 
 export function getStats(): { total: number; downloaded: number; pending: number } {

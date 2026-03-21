@@ -34,3 +34,7 @@ export async function fetchEvents(
 export function videoUrl(eventId: string): string {
   return `${BASE}/video/${eventId}`;
 }
+
+export function thumbnailUrl(eventId: string): string {
+  return `${BASE}/thumbnail/${eventId}`;
+}

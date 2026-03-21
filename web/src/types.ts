@@ -14,6 +14,7 @@ export interface Event {
   downloaded: number;
   file_path: string | null;
   downloaded_at: number | null;
+  thumbnail_path: string | null;
 }
 
 export interface EventsResponse {

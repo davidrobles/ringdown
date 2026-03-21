@@ -6,6 +6,7 @@ export const CONFIG_DIR = path.join(os.homedir(), '.ringdown');
 export const CONFIG_FILE = path.join(CONFIG_DIR, 'config.json');
 export const TOKEN_FILE = path.join(CONFIG_DIR, 'token.json');
 export const DB_FILE = path.join(CONFIG_DIR, 'ringdown.db');
+export const THUMBNAILS_DIR = path.join(CONFIG_DIR, 'thumbnails');
 
 export interface Config {
   outputDir: string;

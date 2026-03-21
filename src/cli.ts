@@ -117,6 +117,17 @@ program
     console.log('');
   });
 
+// ─── thumbnails ──────────────────────────────────────────────────────────────
+
+program
+  .command('thumbnails')
+  .description('Generate JPEG thumbnails for downloaded videos using ffmpeg')
+  .option('-c, --concurrency <number>', 'Parallel ffmpeg processes', parseInt)
+  .action(async (opts) => {
+    const { runThumbnails } = await import('./thumbnails.js');
+    await runThumbnails({ concurrency: opts.concurrency });
+  });
+
 // ─── serve ───────────────────────────────────────────────────────────────────
 
 program

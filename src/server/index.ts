@@ -103,6 +103,33 @@ export async function startServer(port: number, outputDir: string): Promise<void
     return reply.send(fs.createReadStream(filePath));
   });
 
+  // Thumbnail by event ID
+  app.get('/api/thumbnail/:id', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const event = getEventById(id);
+    if (!event || !event.thumbnail_path) {
+      return reply.status(404).send({ error: 'Thumbnail not generated' });
+    }
+    const filePath = event.thumbnail_path.replace(/^~/, process.env.HOME ?? '~');
+    if (!fs.existsSync(filePath)) {
+      return reply.status(404).send({ error: 'Thumbnail file not found on disk' });
+    }
+    reply.header('Content-Type', 'image/jpeg');
+    reply.header('Cache-Control', 'public, max-age=31536000, immutable');
+    return reply.send(fs.createReadStream(filePath));
+  });
+
+  // Screenshot upload — saves PNG to docs/screenshot.png in the project root
+  app.post('/api/screenshot', async (req, reply) => {
+    const repoRoot = path.resolve(__dirname, '../../');
+    const docsDir = path.join(repoRoot, 'docs');
+    fs.mkdirSync(docsDir, { recursive: true });
+    const dest = path.join(docsDir, 'screenshot.png');
+    const body = req.body as Buffer;
+    fs.writeFileSync(dest, body);
+    return reply.send({ saved: dest });
+  });
+
   // SPA fallback — serve index.html for any unmatched route
   app.setNotFoundHandler(async (_req, reply) => {
     const indexPath = path.join(webDist, 'index.html');
