@@ -86,7 +86,9 @@ export async function runDownload(options: DownloadOptions = {}): Promise<number
           await downloadEvent(camera, event, filePath);
           markDownloaded(event.id, filePath);
           const updatedEvent = { ...event, file_path: filePath };
-          generateThumbnail(updatedEvent).catch(() => {});
+          await generateThumbnail(updatedEvent).catch((err) => {
+            console.error('thumbnail error:', err?.message ?? err);
+          });
           spinner.succeed(label);
           downloaded++;
         } catch (err: any) {
