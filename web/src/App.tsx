@@ -121,7 +121,11 @@ export default function App() {
       </div>
 
       {selected && (
-        <VideoPlayer event={selected} onClose={() => setSelected(null)} />
+        <VideoPlayer
+          event={events.find(e => e.id === selected.id) ?? selected}
+          onClose={() => setSelected(null)}
+          onFavorite={handleFavorite}
+        />
       )}
     </div>
   );
