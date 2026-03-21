@@ -74,7 +74,33 @@ export async function startServer(port: number, outputDir: string): Promise<void
     if (!fs.existsSync(filePath)) {
       return reply.status(404).send({ error: 'File not found on disk' });
     }
-    return reply.sendFile(path.basename(filePath), path.dirname(filePath));
+
+    const stat = fs.statSync(filePath);
+    const total = stat.size;
+    const rangeHeader = (req.headers as Record<string, string>)['range'];
+
+    if (rangeHeader) {
+      const [startStr, endStr] = rangeHeader.replace(/bytes=/, '').split('-');
+      const start = parseInt(startStr, 10);
+      const end = endStr ? parseInt(endStr, 10) : total - 1;
+      const chunkSize = end - start + 1;
+
+      reply
+        .status(206)
+        .header('Content-Range', `bytes ${start}-${end}/${total}`)
+        .header('Accept-Ranges', 'bytes')
+        .header('Content-Length', chunkSize)
+        .header('Content-Type', 'video/mp4');
+
+      return reply.send(fs.createReadStream(filePath, { start, end }));
+    }
+
+    reply
+      .header('Content-Length', total)
+      .header('Accept-Ranges', 'bytes')
+      .header('Content-Type', 'video/mp4');
+
+    return reply.send(fs.createReadStream(filePath));
   });
 
   // SPA fallback — serve index.html for any unmatched route
