@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import type { Device, Event, Filters, Stats } from './types.ts';
 import { fetchDevices, fetchEvents, fetchStats, toggleFavorite } from './api.ts';
 import FiltersPanel from './components/Filters.tsx';
@@ -26,6 +26,7 @@ export default function App() {
   const [offset, setOffset]           = useState(0);
   const [loading, setLoading]         = useState(false);
   const [selectedIdx, setSelectedIdx] = useState<number | null>(null);
+  const sentinelRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
     fetchDevices().then(setDevices);
@@ -65,13 +66,26 @@ export default function App() {
     }
   };
 
-  const loadMore = () => {
+  const loadMore = useCallback(() => {
+    if (loading) return;
     const next = offset + PAGE_SIZE;
     setOffset(next);
     load(filters, next);
-  };
+  }, [loading, offset, filters, load]);
 
   const hasMore = events.length < total;
+
+  // Infinite scroll — watch sentinel element at bottom of grid
+  useEffect(() => {
+    const sentinel = sentinelRef.current;
+    if (!sentinel) return;
+    const observer = new IntersectionObserver(
+      (entries) => { if (entries[0].isIntersecting && hasMore && !loading) loadMore(); },
+      { rootMargin: '200px' }
+    );
+    observer.observe(sentinel);
+    return () => observer.disconnect();
+  }, [hasMore, loading, loadMore]);
 
   const handlePrev = useCallback(() => {
     setSelectedIdx(i => (i !== null && i > 0 ? i - 1 : i));
@@ -121,17 +135,11 @@ export default function App() {
                 ))}
               </div>
 
-              {hasMore && (
-                <div className="flex justify-center mt-8">
-                  <button
-                    onClick={loadMore}
-                    disabled={loading}
-                    className="px-6 py-2 rounded-lg bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 text-sm text-zinc-300 transition-colors disabled:opacity-50"
-                  >
-                    {loading ? 'Loading...' : `Load more (${total - events.length} remaining)`}
-                  </button>
-                </div>
-              )}
+              <div ref={sentinelRef} className="flex justify-center mt-8 h-10">
+                {loading && events.length > 0 && (
+                  <div className="text-zinc-500 text-sm animate-pulse">Loading...</div>
+                )}
+              </div>
             </>
           )}
         </main>
