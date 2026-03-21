@@ -27,6 +27,10 @@
 - Fastify for the server — not Express.
 - Keep DB queries in `db.ts`, not scattered across other files.
 
+## Documentation
+- When adding new CLI commands, API routes, DB columns, or web components, update `ARCHITECTURE.md` to reflect the change.
+- At the end of a session, do a pass on `ARCHITECTURE.md` to catch anything missed.
+
 ## Git
 - `.gitignore` always includes: `.DS_Store`, `.idea/`, `.claude/`, `dist/`
 - Never commit `.env` files or token files.
