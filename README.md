@@ -2,6 +2,8 @@
 
 A CLI tool to automatically download Ring camera videos to your local machine — with a local web UI to browse, filter, and watch them in the browser. Run it whenever you want; it tracks what's already been downloaded and only pulls what's new.
 
+![ringdown web UI](docs/screenshot.png)
+
 ## Features
 
 - Authenticates with Ring using OAuth (with 2FA support)
