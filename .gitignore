@@ -1,0 +1,12 @@
+node_modules/
+dist/
+*.js.map
+*.d.ts.map
+
+# Local data — don't commit videos or the DB
+data/
+*.db
+
+# Secrets
+.ringdown/
+*.token.json
