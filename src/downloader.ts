@@ -1,7 +1,7 @@
 import path from 'path';
 import fs from 'fs-extra';
 import chalk from 'chalk';
-import ora from 'ora';
+import cliProgress from 'cli-progress';
 import { RingCamera } from 'ring-client-api';
 import { getRingApi } from './auth.js';
 import { getPendingEvents, markDownloaded, DbEvent } from './db.js';
@@ -60,8 +60,19 @@ export async function runDownload(options: DownloadOptions = {}): Promise<number
 
   console.log(chalk.bold(`\nDownloading ${pending.length} video(s)...\n`));
 
+  const bar = new cliProgress.SingleBar({
+    format: `  {bar} {percentage}%  {value}/{total}  {camera}`,
+    barCompleteChar: '█',
+    barIncompleteChar: '░',
+    hideCursor: true,
+    clearOnComplete: false,
+  }, cliProgress.Presets.shades_classic);
+
+  bar.start(pending.length, 0, { camera: '' });
+
   let downloaded = 0;
   let failed = 0;
+  const failures: string[] = [];
 
   for (let i = 0; i < pending.length; i += concurrency) {
     const batch = pending.slice(i, i + concurrency);
@@ -69,39 +80,41 @@ export async function runDownload(options: DownloadOptions = {}): Promise<number
     await Promise.all(
       batch.map(async (event) => {
         const filePath = eventToFilePath(outputDir, event);
-        const label = `${event.device_name} / ${new Date(event.created_at * 1000).toLocaleString()} [${event.kind}]`;
-        const spinner = ora(label).start();
+        bar.update({ camera: chalk.dim(event.device_name) });
 
         try {
           if (await fs.pathExists(filePath)) {
             markDownloaded(event.id, filePath);
-            spinner.succeed(chalk.dim(`${label} — already on disk`));
             downloaded++;
-            return;
+          } else {
+            const camera = cameraById.get(event.device_id);
+            if (!camera) throw new Error(`Camera ${event.device_id} not found`);
+
+            await downloadEvent(camera, event, filePath);
+            markDownloaded(event.id, filePath);
+            const updatedEvent = { ...event, file_path: filePath };
+            await generateThumbnail(updatedEvent).catch((err) => {
+              console.error('thumbnail error:', err?.message ?? err);
+            });
+            downloaded++;
           }
-
-          const camera = cameraById.get(event.device_id);
-          if (!camera) throw new Error(`Camera ${event.device_id} not found`);
-
-          await downloadEvent(camera, event, filePath);
-          markDownloaded(event.id, filePath);
-          const updatedEvent = { ...event, file_path: filePath };
-          await generateThumbnail(updatedEvent).catch((err) => {
-            console.error('thumbnail error:', err?.message ?? err);
-          });
-          spinner.succeed(label);
-          downloaded++;
         } catch (err: any) {
-          spinner.fail(`${label} — ${err?.message ?? err}`);
           failed++;
+          failures.push(`  ${event.device_name} / ${new Date(event.created_at * 1000).toLocaleString()} — ${err?.message ?? err}`);
+        } finally {
+          bar.increment();
         }
       })
     );
   }
 
+  bar.stop();
   console.log('');
-  if (downloaded > 0) console.log(chalk.green(`Downloaded: ${downloaded}`));
-  if (failed > 0) console.log(chalk.red(`Failed: ${failed}`));
+  if (downloaded > 0) console.log(chalk.green(`  ✓ Downloaded: ${downloaded}`));
+  if (failed > 0) {
+    console.log(chalk.red(`  ✗ Failed: ${failed}`));
+    failures.forEach(f => console.log(chalk.dim(f)));
+  }
 
   return downloaded;
 }
