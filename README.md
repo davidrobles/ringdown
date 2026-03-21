@@ -11,11 +11,13 @@ A CLI tool to automatically download Ring camera videos to your local machine �
 - Downloads only new videos — skips anything already saved
 - Organizes files by device and date: `{outputDir}/{device}/{YYYY-MM-DD}/{event_id}.mp4`
 - Works across all your Ring cameras and doorbells
-- **Web UI** — browse, filter, and play videos in the browser via `ringdown serve`
+- **Web UI** — browse, filter by one or more cameras, and play videos in the browser via `ringdown serve`
+- **Thumbnails** — auto-generated via ffmpeg after each download, shown in the web UI
 
 ## Requirements
 
-- Node.js 18+
+- Node.js 22+
+- [ffmpeg](https://ffmpeg.org/) — for thumbnail generation (`brew install ffmpeg`)
 - A Ring account
 
 ## Installation
@@ -52,7 +54,7 @@ The main command. Syncs your event history from Ring, then downloads anything no
 ringdown serve
 ```
 
-Starts a local web server at `http://localhost:3000` with a video browser. Filter by camera, date range, and event type (motion/ding). Click any event to watch the video inline. Keeps running until you press `Ctrl+C`.
+Starts a local web server at `http://localhost:3000` with a video browser. Filter by one or more cameras, date range, and event type (motion/ding). Click any event to watch the video inline. Keeps running until you press `Ctrl+C`.
 
 ```bash
 ringdown serve --port 8080   # Use a different port
@@ -63,6 +65,7 @@ ringdown serve --port 8080   # Use a different port
 ```bash
 ringdown sync        # Fetch new events from Ring into the local database
 ringdown download    # Download all events not yet saved to disk
+ringdown thumbnails  # Generate thumbnails for downloaded videos (requires ffmpeg)
 ringdown status      # Show counts: synced, downloaded, pending
 ringdown list        # List recent events with download status
 ringdown ls-devices  # List all Ring devices on your account
@@ -126,8 +129,9 @@ sqlite3 ~/.ringdown/ringdown.db \
 
 1. `sync` calls the Ring API and fetches your event history for the configured lookback window, upserting each event into the local DB (`ON CONFLICT DO NOTHING` — fully idempotent).
 2. `download` queries the DB for events where `downloaded = 0`, requests a signed video URL from Ring for each, downloads the MP4, and marks it as downloaded.
-3. `serve` starts a Fastify server that exposes a REST API over the SQLite DB and streams video files with HTTP range request support so they seek and play correctly in the browser.
-4. Token refresh is handled automatically — Ring sessions stay alive without re-authenticating.
+3. `download` also runs ffmpeg after each successful download to extract a frame at 1 second as a JPEG thumbnail, stored in `~/.ringdown/thumbnails/`. Run `ringdown thumbnails` at any time to backfill missing ones.
+4. `serve` starts a Fastify server that exposes a REST API over the SQLite DB and streams video files with HTTP range request support so they seek and play correctly in the browser.
+5. Token refresh is handled automatically — Ring sessions stay alive without re-authenticating.
 
 ## Notes
 
