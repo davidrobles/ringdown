@@ -5,6 +5,7 @@ import ora from 'ora';
 import { RingCamera } from 'ring-client-api';
 import { getRingApi } from './auth.js';
 import { getPendingEvents, markDownloaded, DbEvent } from './db.js';
+import { generateThumbnail } from './thumbnails.js';
 import { loadConfig } from './config.js';
 
 interface DownloadOptions {
@@ -84,6 +85,8 @@ export async function runDownload(options: DownloadOptions = {}): Promise<number
 
           await downloadEvent(camera, event, filePath);
           markDownloaded(event.id, filePath);
+          const updatedEvent = { ...event, file_path: filePath };
+          generateThumbnail(updatedEvent).catch(() => {});
           spinner.succeed(label);
           downloaded++;
         } catch (err: any) {
