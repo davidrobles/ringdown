@@ -77,6 +77,14 @@ export default function FiltersPanel({ filters, devices, onChange, onReset }: Pr
         </div>
 
         <div>
+          <label className={label}>Favorites</label>
+          <select className={select} value={filters.favorited} onChange={set('favorited')}>
+            <option value="">All videos</option>
+            <option value="1">❤️ Favorites only</option>
+          </select>
+        </div>
+
+        <div>
           <label className={label}>From</label>
           <input type="date" className={input} value={filters.date_from} onChange={set('date_from')} />
         </div>

@@ -4,7 +4,7 @@ import fastifyCors from '@fastify/cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { getDevices, getStats, queryEvents, getEventById } from '../db.js';
+import { getDevices, getStats, queryEvents, getEventById, toggleFavorite } from '../db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -52,6 +52,7 @@ export async function startServer(port: number, outputDir: string): Promise<void
       device_ids: deviceIds.length ? deviceIds : undefined,
       kind:       typeof q.kind === 'string' ? q.kind || undefined : undefined,
       downloaded: typeof q.downloaded === 'string' && q.downloaded !== '' ? Number(q.downloaded) : undefined,
+      favorited:  typeof q.favorited  === 'string' && q.favorited  !== '' ? Number(q.favorited)  : undefined,
       dateFrom:   typeof q.date_from === 'string' && q.date_from ? Number(q.date_from) : undefined,
       dateTo:     typeof q.date_to   === 'string' && q.date_to   ? Number(q.date_to)   : undefined,
       limit:      typeof q.limit     === 'string' && q.limit     ? Number(q.limit)     : 50,
@@ -64,6 +65,14 @@ export async function startServer(port: number, outputDir: string): Promise<void
     const event = getEventById(id);
     if (!event) return reply.status(404).send({ error: 'Not found' });
     return event;
+  });
+
+  // Toggle favorite
+  app.post('/api/events/:id/favorite', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const event = getEventById(id);
+    if (!event) return reply.status(404).send({ error: 'Not found' });
+    return toggleFavorite(id);
   });
 
   // Video stream by event ID — looks up the file_path from the DB

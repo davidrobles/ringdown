@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import type { Device, Event, Filters, Stats } from './types.ts';
-import { fetchDevices, fetchEvents, fetchStats } from './api.ts';
+import { fetchDevices, fetchEvents, fetchStats, toggleFavorite } from './api.ts';
 import FiltersPanel from './components/Filters.tsx';
 import EventCard from './components/EventCard.tsx';
 import VideoPlayer from './components/VideoPlayer.tsx';
@@ -12,6 +12,7 @@ const DEFAULT_FILTERS: Filters = {
   device_ids: [],
   kind: '',
   downloaded: '',
+  favorited: '',
   date_from: '',
   date_to: '',
 };
@@ -50,6 +51,22 @@ export default function App() {
   const handleFiltersChange = (f: Filters) => setFilters(f);
   const handleReset = () => setFilters(DEFAULT_FILTERS);
 
+  const handleFavorite = async (eventId: string) => {
+    // Optimistic update
+    setEvents(prev => prev.map(e =>
+      e.id === eventId ? { ...e, favorited: e.favorited ? 0 : 1 } : e
+    ));
+    try {
+      const { favorited } = await toggleFavorite(eventId);
+      setEvents(prev => prev.map(e => e.id === eventId ? { ...e, favorited } : e));
+    } catch {
+      // Revert on failure
+      setEvents(prev => prev.map(e =>
+        e.id === eventId ? { ...e, favorited: e.favorited ? 0 : 1 } : e
+      ));
+    }
+  };
+
   const loadMore = () => {
     const next = offset + PAGE_SIZE;
     setOffset(next);
@@ -83,7 +100,7 @@ export default function App() {
             <>
               <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
                 {events.map((e) => (
-                  <EventCard key={e.id} event={e} onClick={() => setSelected(e)} />
+                  <EventCard key={e.id} event={e} onClick={() => setSelected(e)} onFavorite={handleFavorite} />
                 ))}
               </div>
 

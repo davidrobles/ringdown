@@ -15,6 +15,7 @@ export interface Event {
   file_path: string | null;
   downloaded_at: number | null;
   thumbnail_path: string | null;
+  favorited: number;
 }
 
 export interface EventsResponse {
@@ -32,6 +33,7 @@ export interface Filters {
   device_ids: string[];
   kind: string;
   downloaded: string;
+  favorited: string;
   date_from: string;
   date_to: string;
 }

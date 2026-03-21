@@ -12,6 +12,7 @@ export interface DbEvent {
   file_path: string | null;
   downloaded_at: number | null;
   thumbnail_path: string | null;
+  favorited: number;
 }
 
 export interface DbDevice {
@@ -60,6 +61,10 @@ function migrate(db: Database.Database): void {
   if (!columns.includes('thumbnail_path')) {
     db.exec(`ALTER TABLE events ADD COLUMN thumbnail_path TEXT`);
   }
+  // v3: add favorited column if missing
+  if (!columns.includes('favorited')) {
+    db.exec(`ALTER TABLE events ADD COLUMN favorited INTEGER NOT NULL DEFAULT 0`);
+  }
 }
 
 export function upsertDevice(device: DbDevice): void {
@@ -71,7 +76,7 @@ export function upsertDevice(device: DbDevice): void {
   `).run(device);
 }
 
-export function upsertEvent(event: Omit<DbEvent, 'downloaded' | 'file_path' | 'downloaded_at' | 'thumbnail_path'>): void {
+export function upsertEvent(event: Omit<DbEvent, 'downloaded' | 'file_path' | 'downloaded_at' | 'thumbnail_path' | 'favorited'>): void {
   const db = getDb();
   db.prepare(`
     INSERT INTO events (id, device_id, device_name, kind, created_at, duration)
@@ -128,6 +133,7 @@ export interface EventsQuery {
   device_ids?: string[];
   kind?: string;
   downloaded?: number;
+  favorited?: number;
   dateFrom?: number;
   dateTo?: number;
   limit?: number;
@@ -146,6 +152,7 @@ export function queryEvents(q: EventsQuery): { events: DbEvent[]; total: number 
   }
   if (q.kind)      { conditions.push('kind = @kind');           params.kind = q.kind; }
   if (q.downloaded !== undefined) { conditions.push('downloaded = @downloaded'); params.downloaded = q.downloaded; }
+  if (q.favorited  !== undefined) { conditions.push('favorited = @favorited');   params.favorited  = q.favorited;  }
   if (q.dateFrom)  { conditions.push('created_at >= @dateFrom'); params.dateFrom = q.dateFrom; }
   if (q.dateTo)    { conditions.push('created_at <= @dateTo');   params.dateTo = q.dateTo; }
 
@@ -162,4 +169,11 @@ export function queryEvents(q: EventsQuery): { events: DbEvent[]; total: number 
 
 export function getEventById(id: string): DbEvent | null {
   return (getDb().prepare(`SELECT * FROM events WHERE id = ?`).get(id) as DbEvent | undefined) ?? null;
+}
+
+export function toggleFavorite(id: string): { favorited: number } {
+  const db = getDb();
+  db.prepare(`UPDATE events SET favorited = CASE WHEN favorited = 1 THEN 0 ELSE 1 END WHERE id = ?`).run(id);
+  const row = db.prepare(`SELECT favorited FROM events WHERE id = ?`).get(id) as { favorited: number };
+  return row;
 }
