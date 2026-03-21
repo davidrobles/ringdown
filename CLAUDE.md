@@ -2,6 +2,7 @@
 
 ## Commits
 - **Never commit automatically.** Always ask the user if they want to commit after making changes. Wait for explicit confirmation before running any `git commit` command.
+- **Always push after committing.** Every commit should be followed by `git push`.
 - Never add Claude as co-author in commits.
 - Commit related changes separately — don't bundle unrelated fixes into one commit.
 
