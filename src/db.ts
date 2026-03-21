@@ -104,9 +104,19 @@ export function markThumbnailed(id: string, thumbnailPath: string): void {
     .run({ id, thumbnailPath });
 }
 
+export function setDuration(id: string, duration: number): void {
+  getDb().prepare(`UPDATE events SET duration = @duration WHERE id = @id`).run({ id, duration });
+}
+
 export function getEventsWithoutThumbnails(): DbEvent[] {
   return getDb()
     .prepare(`SELECT * FROM events WHERE downloaded = 1 AND file_path IS NOT NULL AND thumbnail_path IS NULL ORDER BY created_at DESC`)
+    .all() as DbEvent[];
+}
+
+export function getEventsWithoutDuration(): DbEvent[] {
+  return getDb()
+    .prepare(`SELECT * FROM events WHERE downloaded = 1 AND file_path IS NOT NULL AND duration IS NULL ORDER BY created_at DESC`)
     .all() as DbEvent[];
 }
 

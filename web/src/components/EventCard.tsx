@@ -55,6 +55,13 @@ export default function EventCard({ event, onClick, onFavorite }: Props) {
         {/* Downloaded badge */}
         <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${event.downloaded ? 'bg-green-400' : 'bg-zinc-600'}`} />
 
+        {/* Duration overlay */}
+        {event.duration && (
+          <span className="absolute bottom-2 right-2 text-xs text-white bg-black/60 px-1.5 py-0.5 rounded font-mono">
+            {Math.floor(event.duration / 60)}:{String(event.duration % 60).padStart(2, '0')}
+          </span>
+        )}
+
         {/* Favorite button */}
         <button
           onClick={handleFavorite}
