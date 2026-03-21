@@ -7,6 +7,12 @@ dist/
 data/
 *.db
 
+# IDE
+.idea/
+
+# Claude Code
+.claude/
+
 # Secrets
 .ringdown/
 *.token.json
