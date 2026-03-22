@@ -17,7 +17,21 @@ export async function runSync(options: SyncOptions = {}): Promise<number> {
 
   const spinner = ora('Connecting to Ring...').start();
 
-  const api = await getRingApi();
+  let api: Awaited<ReturnType<typeof getRingApi>>;
+  try {
+    api = await getRingApi();
+  } catch (err: any) {
+    const msg = err?.message ?? String(err);
+    if (/unauthorized|refresh.?token|401|invalid.?token/i.test(msg)) {
+      spinner.fail(
+        chalk.red('Authentication failed — your Ring session has expired.\n') +
+        chalk.yellow('  Run: ') + chalk.bold('ringdown auth')
+      );
+    } else {
+      spinner.fail(`Failed to connect to Ring: ${msg}`);
+    }
+    process.exit(1);
+  }
 
   spinner.text = 'Fetching cameras...';
   const cameras = await api.getCameras();
