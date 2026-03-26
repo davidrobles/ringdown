@@ -8,6 +8,32 @@ import StatusBar from './components/StatusBar.tsx';
 
 const PAGE_SIZE = 48;
 
+function groupByDay(events: Event[]) {
+  const today     = new Date(); today.setHours(0,0,0,0);
+  const yesterday = new Date(today); yesterday.setDate(today.getDate() - 1);
+
+  const groups: { label: string; events: Event[]; startIdx: number }[] = [];
+  let currentLabel = '';
+  let startIdx = 0;
+
+  events.forEach((e, i) => {
+    const d = new Date(e.created_at * 1000); d.setHours(0,0,0,0);
+    let label: string;
+    if (d.getTime() === today.getTime())     label = 'Today';
+    else if (d.getTime() === yesterday.getTime()) label = 'Yesterday';
+    else label = d.toLocaleDateString(undefined, { month: 'long', day: 'numeric', year: 'numeric' });
+
+    if (label !== currentLabel) {
+      groups.push({ label, events: [], startIdx: i });
+      currentLabel = label;
+      startIdx = i;
+    }
+    groups[groups.length - 1].events.push(e);
+  });
+
+  return groups;
+}
+
 const DEFAULT_FILTERS: Filters = {
   device_ids: [],
   kind: '',
@@ -129,11 +155,18 @@ export default function App() {
             </div>
           ) : (
             <>
-              <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
-                {events.map((e, i) => (
-                  <EventCard key={e.id} event={e} onClick={() => setSelectedIdx(i)} onFavorite={handleFavorite} />
-                ))}
-              </div>
+              {groupByDay(events).map(({ label, events: group, startIdx }) => (
+                <div key={label} className="mb-8">
+                  <h2 className="text-xs font-semibold text-zinc-500 uppercase tracking-widest mb-3 sticky top-0 bg-zinc-950 py-1 z-10">
+                    {label}
+                  </h2>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 2xl:grid-cols-6 gap-4">
+                    {group.map((e, i) => (
+                      <EventCard key={e.id} event={e} onClick={() => setSelectedIdx(startIdx + i)} onFavorite={handleFavorite} />
+                    ))}
+                  </div>
+                </div>
+              ))}
 
               <div ref={sentinelRef} className="flex justify-center mt-8 h-10">
                 {loading && events.length > 0 && (
