@@ -4,7 +4,7 @@ import chalk from 'chalk';
 import { runAuth } from './auth.js';
 import { runSync } from './sync.js';
 import { runDownload } from './downloader.js';
-import { getStats, getRecentEvents, getDevices, getDownloadedFilePaths } from './db.js';
+import { getStats, getRecentEvents, getDevices, getDownloadedFilePaths, getEventsWithoutFileSize, setFileSize, getCameraStorageStats } from './db.js';
 import fs from 'fs-extra';
 import { loadConfig } from './config.js';
 
@@ -123,20 +123,26 @@ program
 program
   .command('storage')
   .description('Show disk usage breakdown by camera')
-  .action(() => {
-    const rows = getDownloadedFilePaths();
-
-    const byCamera = new Map<string, { count: number; bytes: number }>();
-
-    for (const { device_name, file_path } of rows) {
-      const resolved = file_path.replace(/^~/, process.env.HOME ?? '~');
-      let size = 0;
-      try { size = fs.statSync(resolved).size; } catch { /* file missing */ }
-
-      const entry = byCamera.get(device_name) ?? { count: 0, bytes: 0 };
-      entry.count++;
-      entry.bytes += size;
-      byCamera.set(device_name, entry);
+  .option('--backfill', 'Backfill missing file sizes from disk')
+  .action((opts) => {
+    if (opts.backfill) {
+      const rows = getEventsWithoutFileSize();
+      if (rows.length === 0) {
+        console.log(chalk.green('\n  All file sizes are up to date.\n'));
+        return;
+      }
+      console.log(chalk.bold(`\n  Backfilling file sizes for ${rows.length} videos...\n`));
+      let updated = 0;
+      for (const { id, file_path } of rows) {
+        const resolved = file_path.replace(/^~/, process.env.HOME ?? '~');
+        try {
+          const { size } = fs.statSync(resolved);
+          setFileSize(id, size);
+          updated++;
+        } catch { /* file missing, skip */ }
+      }
+      console.log(chalk.green(`  ✓ Done. ${updated} updated.\n`));
+      return;
     }
 
     const fmt = (bytes: number) => {
@@ -145,19 +151,63 @@ program
       return `${(bytes / 1e3).toFixed(1)} KB`;
     };
 
-    const sorted = [...byCamera.entries()].sort((a, b) => b[1].bytes - a[1].bytes);
-    const totalBytes = sorted.reduce((sum, [, v]) => sum + v.bytes, 0);
-    const totalCount = sorted.reduce((sum, [, v]) => sum + v.count, 0);
-    const nameWidth = Math.max(...sorted.map(([k]) => k.length), 6);
-
-    console.log('');
-    console.log(`  ${'Camera'.padEnd(nameWidth)}   ${'Videos'.padStart(7)}   ${'Size'.padStart(8)}`);
-    console.log(`  ${'─'.repeat(nameWidth + 22)}`);
-    for (const [name, { count, bytes }] of sorted) {
-      console.log(`  ${chalk.bold(name.padEnd(nameWidth))}   ${String(count).padStart(7)}   ${chalk.cyan(fmt(bytes).padStart(8))}`);
+    // Build per-camera size map from disk
+    const filePaths = getDownloadedFilePaths();
+    const sizeByCamera = new Map<string, number>();
+    for (const { device_name, file_path } of filePaths) {
+      const resolved = file_path.replace(/^~/, process.env.HOME ?? '~');
+      let size = 0;
+      try { size = fs.statSync(resolved).size; } catch { /* file missing */ }
+      sizeByCamera.set(device_name, (sizeByCamera.get(device_name) ?? 0) + size);
     }
-    console.log(`  ${'─'.repeat(nameWidth + 22)}`);
-    console.log(`  ${'Total'.padEnd(nameWidth)}   ${String(totalCount).padStart(7)}   ${chalk.green(fmt(totalBytes).padStart(8))}`);
+
+    const cameras = getCameraStorageStats();
+    const totalBytes = [...sizeByCamera.values()].reduce((s, b) => s + b, 0);
+    const totals = cameras.reduce((acc, r) => ({
+      total: acc.total + r.total,
+      downloaded: acc.downloaded + r.downloaded,
+      pending: acc.pending + r.pending,
+      deleted: acc.deleted + r.deleted,
+    }), { total: 0, downloaded: 0, pending: 0, deleted: 0 });
+
+    const pct = (n: number, d: number) => d ? `(${Math.round(n / d * 100)}%)` : '';
+
+    // ── Summary ──────────────────────────────────────────────────────────
+    console.log('');
+    console.log(`  ${chalk.bold('Total in DB:')}    ${totals.total.toLocaleString()}`);
+    console.log(`  ${chalk.bold('Downloaded:')}     ${chalk.green(totals.downloaded.toLocaleString())}  ${chalk.dim(pct(totals.downloaded, totals.total))}`);
+    console.log(`  ${chalk.bold('Pending:')}        ${chalk.yellow(totals.pending.toLocaleString())}  ${chalk.dim(pct(totals.pending, totals.total))}`);
+    console.log(`  ${chalk.bold('Deleted:')}        ${chalk.dim(totals.deleted.toLocaleString())}  ${chalk.dim(pct(totals.deleted, totals.total))}`);
+    console.log(`  ${chalk.bold('Disk usage:')}     ${chalk.cyan(fmt(totalBytes))}`);
+    console.log('');
+
+    // ── Per-camera table ──────────────────────────────────────────────────
+    const sorted = [...cameras].sort((a, b) => (sizeByCamera.get(b.device_name) ?? 0) - (sizeByCamera.get(a.device_name) ?? 0));
+    const nw = Math.max(...sorted.map(r => r.device_name.length), 6);
+    const div = '─'.repeat(nw + 52);
+
+    console.log(`  ${'Camera'.padEnd(nw)}   ${'In DB'.padStart(6)}   ${'Downloaded'.padStart(10)}   ${'Pending'.padStart(7)}   ${'Deleted'.padStart(7)}   ${'Size'.padStart(8)}`);
+    console.log(`  ${div}`);
+    for (const r of sorted) {
+      const bytes = sizeByCamera.get(r.device_name) ?? 0;
+      console.log(
+        `  ${chalk.bold(r.device_name.padEnd(nw))}` +
+        `   ${String(r.total).padStart(6)}` +
+        `   ${chalk.green(String(r.downloaded).padStart(10))}` +
+        `   ${chalk.yellow(String(r.pending).padStart(7))}` +
+        `   ${chalk.dim(String(r.deleted).padStart(7))}` +
+        `   ${chalk.cyan(fmt(bytes).padStart(8))}`
+      );
+    }
+    console.log(`  ${div}`);
+    console.log(
+      `  ${'Total'.padEnd(nw)}` +
+      `   ${String(totals.total).padStart(6)}` +
+      `   ${chalk.green(String(totals.downloaded).padStart(10))}` +
+      `   ${chalk.yellow(String(totals.pending).padStart(7))}` +
+      `   ${chalk.dim(String(totals.deleted).padStart(7))}` +
+      `   ${chalk.cyan(fmt(totalBytes).padStart(8))}`
+    );
     console.log('');
   });
 

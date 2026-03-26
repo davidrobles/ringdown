@@ -199,6 +199,28 @@ export function getDownloadedFilePaths(): { device_name: string; file_path: stri
     .all() as { device_name: string; file_path: string }[];
 }
 
+export interface CameraStorageRow {
+  device_name: string;
+  total: number;
+  downloaded: number;
+  deleted: number;
+  pending: number;
+}
+
+export function getCameraStorageStats(): CameraStorageRow[] {
+  return getDb().prepare(`
+    SELECT
+      device_name,
+      COUNT(*)                                              AS total,
+      SUM(CASE WHEN downloaded = 1 AND file_deleted = 0 THEN 1 ELSE 0 END) AS downloaded,
+      SUM(CASE WHEN file_deleted = 1 THEN 1 ELSE 0 END)                   AS deleted,
+      SUM(CASE WHEN downloaded = 0 THEN 1 ELSE 0 END)                     AS pending
+    FROM events
+    GROUP BY device_name
+    ORDER BY device_name
+  `).all() as CameraStorageRow[];
+}
+
 export function getEventsWithoutFileSize(): { id: string; file_path: string }[] {
   return getDb()
     .prepare(`SELECT id, file_path FROM events WHERE downloaded = 1 AND file_path IS NOT NULL AND file_size IS NULL`)
