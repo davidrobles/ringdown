@@ -11,7 +11,9 @@ export interface Event {
   kind: string;
   created_at: number;
   duration: number | null;
+  file_size: number | null;
   downloaded: number;
+  file_deleted: number;
   file_path: string | null;
   downloaded_at: number | null;
   thumbnail_path: string | null;
@@ -34,6 +36,7 @@ export interface Filters {
   kind: string;
   downloaded: string;
   favorited: string;
+  show_deleted: boolean;
   date_from: string;
   date_to: string;
 }

@@ -8,7 +8,9 @@ export interface DbEvent {
   kind: string;
   created_at: number;
   duration: number | null;
+  file_size: number | null;
   downloaded: number;
+  file_deleted: number;
   file_path: string | null;
   downloaded_at: number | null;
   thumbnail_path: string | null;
@@ -65,6 +67,14 @@ function migrate(db: Database.Database): void {
   if (!columns.includes('favorited')) {
     db.exec(`ALTER TABLE events ADD COLUMN favorited INTEGER NOT NULL DEFAULT 0`);
   }
+  // v4: add file_size column if missing
+  if (!columns.includes('file_size')) {
+    db.exec(`ALTER TABLE events ADD COLUMN file_size INTEGER`);
+  }
+  // v5: add file_deleted column if missing
+  if (!columns.includes('file_deleted')) {
+    db.exec(`ALTER TABLE events ADD COLUMN file_deleted INTEGER NOT NULL DEFAULT 0`);
+  }
 }
 
 export function upsertDevice(device: DbDevice): void {
@@ -76,7 +86,7 @@ export function upsertDevice(device: DbDevice): void {
   `).run(device);
 }
 
-export function upsertEvent(event: Omit<DbEvent, 'downloaded' | 'file_path' | 'downloaded_at' | 'thumbnail_path' | 'favorited'>): void {
+export function upsertEvent(event: Omit<DbEvent, 'downloaded' | 'file_path' | 'file_size' | 'file_deleted' | 'downloaded_at' | 'thumbnail_path' | 'favorited'>): void {
   const db = getDb();
   db.prepare(`
     INSERT INTO events (id, device_id, device_name, kind, created_at, duration)
@@ -91,12 +101,12 @@ export function getPendingEvents(): DbEvent[] {
     .all() as DbEvent[];
 }
 
-export function markDownloaded(id: string, filePath: string): void {
+export function markDownloaded(id: string, filePath: string, fileSize?: number): void {
   getDb().prepare(`
     UPDATE events
-    SET downloaded = 1, file_path = @filePath, downloaded_at = @now
+    SET downloaded = 1, file_path = @filePath, downloaded_at = @now, file_size = @fileSize
     WHERE id = @id
-  `).run({ id, filePath, now: Math.floor(Date.now() / 1000) });
+  `).run({ id, filePath, now: Math.floor(Date.now() / 1000), fileSize: fileSize ?? null });
 }
 
 export function markThumbnailed(id: string, thumbnailPath: string): void {
@@ -144,6 +154,7 @@ export interface EventsQuery {
   kind?: string;
   downloaded?: number;
   favorited?: number;
+  show_deleted?: boolean;
   dateFrom?: number;
   dateTo?: number;
   limit?: number;
@@ -163,6 +174,7 @@ export function queryEvents(q: EventsQuery): { events: DbEvent[]; total: number 
   if (q.kind)      { conditions.push('kind = @kind');           params.kind = q.kind; }
   if (q.downloaded !== undefined) { conditions.push('downloaded = @downloaded'); params.downloaded = q.downloaded; }
   if (q.favorited  !== undefined) { conditions.push('favorited = @favorited');   params.favorited  = q.favorited;  }
+  if (!q.show_deleted)            { conditions.push('file_deleted = 0'); }
   if (q.dateFrom)  { conditions.push('created_at >= @dateFrom'); params.dateFrom = q.dateFrom; }
   if (q.dateTo)    { conditions.push('created_at <= @dateTo');   params.dateTo = q.dateTo; }
 
@@ -185,6 +197,20 @@ export function getDownloadedFilePaths(): { device_name: string; file_path: stri
   return getDb()
     .prepare(`SELECT device_name, file_path FROM events WHERE downloaded = 1 AND file_path IS NOT NULL`)
     .all() as { device_name: string; file_path: string }[];
+}
+
+export function getEventsWithoutFileSize(): { id: string; file_path: string }[] {
+  return getDb()
+    .prepare(`SELECT id, file_path FROM events WHERE downloaded = 1 AND file_path IS NOT NULL AND file_size IS NULL`)
+    .all() as { id: string; file_path: string }[];
+}
+
+export function setFileSize(id: string, fileSize: number): void {
+  getDb().prepare(`UPDATE events SET file_size = @fileSize WHERE id = @id`).run({ id, fileSize });
+}
+
+export function deleteLocalFile(id: string): void {
+  getDb().prepare(`UPDATE events SET file_deleted = 1 WHERE id = ?`).run(id);
 }
 
 export function toggleFavorite(id: string): { favorited: number } {

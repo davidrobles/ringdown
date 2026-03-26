@@ -94,6 +94,16 @@ export default function FiltersPanel({ filters, devices, onChange, onReset }: Pr
           <input type="date" className={input} value={filters.date_to} onChange={set('date_to')} />
         </div>
 
+        <label className="flex items-center gap-2 cursor-pointer group">
+          <input
+            type="checkbox"
+            checked={filters.show_deleted}
+            onChange={(e) => onChange({ ...filters, show_deleted: e.target.checked })}
+            className="accent-blue-500 w-3.5 h-3.5 shrink-0"
+          />
+          <span className="text-sm text-zinc-400 group-hover:text-white transition-colors">Show deleted</span>
+        </label>
+
         <button
           onClick={onReset}
           className="text-xs text-zinc-400 hover:text-white text-left mt-1 transition-colors"

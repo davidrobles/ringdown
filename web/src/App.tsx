@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from 'react';
 import type { Device, Event, Filters, Stats } from './types.ts';
-import { fetchDevices, fetchEvents, fetchStats, toggleFavorite } from './api.ts';
+import { fetchDevices, fetchEvents, fetchStats, toggleFavorite, deleteFile } from './api.ts';
 import FiltersPanel from './components/Filters.tsx';
 import EventCard from './components/EventCard.tsx';
 import VideoPlayer from './components/VideoPlayer.tsx';
@@ -39,6 +39,7 @@ const DEFAULT_FILTERS: Filters = {
   kind: '',
   downloaded: '',
   favorited: '',
+  show_deleted: false,
   date_from: '',
   date_to: '',
 };
@@ -77,6 +78,13 @@ export default function App() {
 
   const handleFiltersChange = (f: Filters) => setFilters(f);
   const handleReset = () => setFilters(DEFAULT_FILTERS);
+
+  const handleDelete = async (eventId: string) => {
+    await deleteFile(eventId);
+    setEvents(prev => prev.map(e =>
+      e.id === eventId ? { ...e, file_deleted: 1, thumbnail_path: null } : e
+    ));
+  };
 
   const handleFavorite = async (eventId: string) => {
     setEvents(prev => prev.map(e =>
@@ -187,6 +195,7 @@ export default function App() {
           onNext={handleNext}
           onClose={() => setSelectedIdx(null)}
           onFavorite={handleFavorite}
+          onDelete={handleDelete}
         />
       )}
     </div>

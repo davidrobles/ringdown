@@ -1,4 +1,9 @@
-import { useEffect, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
+
+function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
 import type { Event } from '../types.ts';
 import { videoUrl } from '../api.ts';
 
@@ -10,9 +15,11 @@ interface Props {
   onNext: () => void;
   onClose: () => void;
   onFavorite: (id: string) => void;
+  onDelete: (id: string) => void;
 }
 
-export default function VideoPlayer({ event, hasPrev, hasNext, onPrev, onNext, onClose, onFavorite }: Props) {
+export default function VideoPlayer({ event, hasPrev, hasNext, onPrev, onNext, onClose, onFavorite, onDelete }: Props) {
+  const [confirmDelete, setConfirmDelete] = useState(false);
   const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -54,10 +61,11 @@ export default function VideoPlayer({ event, hasPrev, hasNext, onPrev, onNext, o
             <p className="text-sm font-semibold text-white">{event.device_name}</p>
             <p className="text-xs text-zinc-400">
               {date.toLocaleDateString()} · {date.toLocaleTimeString()} · <span className="capitalize">{event.kind}</span>
+              {event.file_size ? ` · ${formatBytes(event.file_size)}` : ''}
             </p>
           </div>
           <div className="flex items-center gap-3">
-            {event.downloaded && (
+            {event.downloaded && !event.file_deleted && (
               <a
                 href={videoUrl(event.id)}
                 download={`${event.device_name}-${new Date(event.created_at * 1000).toISOString().slice(0, 19).replace(/:/g, '-')}.mp4`}
@@ -68,6 +76,31 @@ export default function VideoPlayer({ event, hasPrev, hasNext, onPrev, onNext, o
                   <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
                 </svg>
               </a>
+            )}
+            {event.downloaded && !event.file_deleted && (
+              confirmDelete ? (
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-zinc-400">Delete local file?</span>
+                  <button
+                    onClick={() => { onDelete(event.id); setConfirmDelete(false); }}
+                    className="text-xs text-red-400 hover:text-red-300 font-medium transition-colors"
+                  >Yes</button>
+                  <button
+                    onClick={() => setConfirmDelete(false)}
+                    className="text-xs text-zinc-400 hover:text-white transition-colors"
+                  >No</button>
+                </div>
+              ) : (
+                <button
+                  onClick={() => setConfirmDelete(true)}
+                  aria-label="Delete local file"
+                  className="text-zinc-400 hover:text-red-400 transition-colors"
+                >
+                  <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                  </svg>
+                </button>
+              )
             )}
             <button
               onClick={() => onFavorite(event.id)}
@@ -95,7 +128,14 @@ export default function VideoPlayer({ event, hasPrev, hasNext, onPrev, onNext, o
 
         {/* Video */}
         <div className="bg-black">
-          {event.downloaded ? (
+          {event.file_deleted ? (
+            <div className="flex flex-col items-center justify-center h-48 gap-3 text-zinc-500">
+              <svg className="w-10 h-10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+              </svg>
+              <span className="text-sm">Local file deleted</span>
+            </div>
+          ) : event.downloaded ? (
             <video
               key={event.id}
               src={videoUrl(event.id)}

@@ -24,6 +24,7 @@ export async function fetchEvents(
                            params.set('downloaded',  filters.downloaded);
   if (filters.favorited  !== undefined && filters.favorited  !== '')
                            params.set('favorited',   filters.favorited);
+  if (filters.show_deleted) params.set('show_deleted', 'true');
   if (filters.date_from)  params.set('date_from',   String(new Date(filters.date_from).getTime() / 1000));
   if (filters.date_to)    params.set('date_to',     String(new Date(filters.date_to).getTime() / 1000 + 86399));
   params.set('limit',  String(limit));
@@ -44,4 +45,8 @@ export function thumbnailUrl(eventId: string): string {
 export async function toggleFavorite(eventId: string): Promise<{ favorited: number }> {
   const res = await fetch(`${BASE}/events/${eventId}/favorite`, { method: 'POST' });
   return res.json();
+}
+
+export async function deleteFile(eventId: string): Promise<void> {
+  await fetch(`${BASE}/events/${eventId}/file`, { method: 'DELETE' });
 }

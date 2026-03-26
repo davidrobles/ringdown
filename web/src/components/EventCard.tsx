@@ -7,6 +7,11 @@ interface Props {
   onFavorite: (id: string) => void;
 }
 
+function formatBytes(bytes: number): string {
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
 const kindColor: Record<string, string> = {
   motion:    'bg-amber-500/20 text-amber-300',
   ding:      'bg-blue-500/20 text-blue-300',
@@ -28,8 +33,15 @@ export default function EventCard({ event, onClick, onFavorite }: Props) {
       className="group relative flex flex-col bg-zinc-800 hover:bg-zinc-700 border border-zinc-700 hover:border-zinc-500 rounded-xl overflow-hidden transition-all text-left"
     >
       {/* Thumbnail */}
-      <div className="bg-zinc-900 aspect-video flex items-center justify-center relative overflow-hidden">
-        {event.thumbnail_path ? (
+      <div className={`bg-zinc-900 aspect-video flex items-center justify-center relative overflow-hidden ${event.file_deleted ? 'opacity-40' : ''}`}>
+        {event.file_deleted ? (
+          <div className="flex flex-col items-center gap-1.5 text-zinc-500">
+            <svg className="w-8 h-8" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={1.5}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+            </svg>
+            <span className="text-xs">File deleted</span>
+          </div>
+        ) : event.thumbnail_path ? (
           <img
             src={thumbnailUrl(event.id)}
             alt=""
@@ -51,6 +63,7 @@ export default function EventCard({ event, onClick, onFavorite }: Props) {
             <span className="text-xs">Not downloaded</span>
           </div>
         )}
+
 
         {/* Downloaded badge */}
         <span className={`absolute top-2 right-2 w-2 h-2 rounded-full ${event.downloaded ? 'bg-green-400' : 'bg-zinc-600'}`} />
@@ -86,9 +99,14 @@ export default function EventCard({ event, onClick, onFavorite }: Props) {
         <p className="text-xs text-zinc-400">
           {date.toLocaleDateString()} · {date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
         </p>
-        <span className={`mt-1 self-start text-xs font-medium px-2 py-0.5 rounded-full capitalize ${kindClass}`}>
-          {event.kind}
-        </span>
+        <div className="mt-1 flex items-center justify-between gap-2">
+          <span className={`self-start text-xs font-medium px-2 py-0.5 rounded-full capitalize ${kindClass}`}>
+            {event.kind}
+          </span>
+          {event.file_size && (
+            <span className="text-xs text-zinc-500">{formatBytes(event.file_size)}</span>
+          )}
+        </div>
       </div>
     </button>
   );

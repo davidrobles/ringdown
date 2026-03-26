@@ -4,7 +4,7 @@ import fastifyCors from '@fastify/cors';
 import path from 'path';
 import fs from 'fs';
 import { fileURLToPath } from 'url';
-import { getDevices, getStats, queryEvents, getEventById, toggleFavorite } from '../db.js';
+import { getDevices, getStats, queryEvents, getEventById, toggleFavorite, deleteLocalFile } from '../db.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
@@ -51,8 +51,9 @@ export async function startServer(port: number, outputDir: string): Promise<void
     return queryEvents({
       device_ids: deviceIds.length ? deviceIds : undefined,
       kind:       typeof q.kind === 'string' ? q.kind || undefined : undefined,
-      downloaded: typeof q.downloaded === 'string' && q.downloaded !== '' ? Number(q.downloaded) : undefined,
-      favorited:  typeof q.favorited  === 'string' && q.favorited  !== '' ? Number(q.favorited)  : undefined,
+      downloaded:    typeof q.downloaded === 'string' && q.downloaded !== '' ? Number(q.downloaded) : undefined,
+      favorited:     typeof q.favorited  === 'string' && q.favorited  !== '' ? Number(q.favorited)  : undefined,
+      show_deleted:  q.show_deleted === 'true',
       dateFrom:   typeof q.date_from === 'string' && q.date_from ? Number(q.date_from) : undefined,
       dateTo:     typeof q.date_to   === 'string' && q.date_to   ? Number(q.date_to)   : undefined,
       limit:      typeof q.limit     === 'string' && q.limit     ? Number(q.limit)     : 50,
@@ -73,6 +74,24 @@ export async function startServer(port: number, outputDir: string): Promise<void
     const event = getEventById(id);
     if (!event) return reply.status(404).send({ error: 'Not found' });
     return toggleFavorite(id);
+  });
+
+  // Delete local file — removes mp4 and thumbnail from disk, marks file_deleted = 1
+  app.delete('/api/events/:id/file', async (req, reply) => {
+    const { id } = req.params as { id: string };
+    const event = getEventById(id);
+    if (!event) return reply.status(404).send({ error: 'Not found' });
+
+    if (event.file_path) {
+      const filePath = event.file_path.replace(/^~/, process.env.HOME ?? '~');
+      try { fs.unlinkSync(filePath); } catch { /* already gone */ }
+    }
+    if (event.thumbnail_path) {
+      const thumbPath = event.thumbnail_path.replace(/^~/, process.env.HOME ?? '~');
+      try { fs.unlinkSync(thumbPath); } catch { /* already gone */ }
+    }
+    deleteLocalFile(id);
+    return { deleted: true };
   });
 
   // Video stream by event ID — looks up the file_path from the DB
