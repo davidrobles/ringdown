@@ -95,6 +95,17 @@ export default function FiltersPanel({ filters, devices, onChange, onReset }: Pr
         </div>
 
         <div>
+          <label className={label}>Time of day</label>
+          <select className={select} value={filters.time_of_day} onChange={set('time_of_day')}>
+            <option value="">All times</option>
+            <option value="night">🌙 Night (10pm – 7am)</option>
+            <option value="morning">🌅 Morning (7am – 12pm)</option>
+            <option value="afternoon">☀️ Afternoon (12pm – 6pm)</option>
+            <option value="evening">🌆 Evening (6pm – 10pm)</option>
+          </select>
+        </div>
+
+        <div>
           <label className={label}>Sort by</label>
           <div className="flex gap-2">
             <select

@@ -40,6 +40,7 @@ const DEFAULT_FILTERS: Filters = {
   downloaded: '',
   favorited: '',
   show_deleted: false,
+  time_of_day: '',
   sort_by: 'created_at',
   sort_dir: 'desc',
   date_from: '',

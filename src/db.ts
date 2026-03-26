@@ -149,12 +149,15 @@ export function getDevices(): DbDevice[] {
     .all() as DbDevice[];
 }
 
+export type TimeOfDay = 'night' | 'morning' | 'afternoon' | 'evening';
+
 export interface EventsQuery {
   device_ids?: string[];
   kind?: string;
   downloaded?: number;
   favorited?: number;
   show_deleted?: boolean;
+  time_of_day?: TimeOfDay;
   dateFrom?: number;
   dateTo?: number;
   sort_by?: 'created_at' | 'duration' | 'file_size';
@@ -176,7 +179,14 @@ export function queryEvents(q: EventsQuery): { events: DbEvent[]; total: number 
   if (q.kind)      { conditions.push('kind = @kind');           params.kind = q.kind; }
   if (q.downloaded !== undefined) { conditions.push('downloaded = @downloaded'); params.downloaded = q.downloaded; }
   if (q.favorited  !== undefined) { conditions.push('favorited = @favorited');   params.favorited  = q.favorited;  }
-  if (!q.show_deleted)            { conditions.push('file_deleted = 0'); }
+  if (!q.show_deleted) { conditions.push('file_deleted = 0'); }
+  if (q.time_of_day) {
+    const hour = `CAST(strftime('%H', created_at, 'unixepoch', 'localtime') AS INTEGER)`;
+    if (q.time_of_day === 'night')     conditions.push(`(${hour} >= 22 OR ${hour} < 7)`);
+    if (q.time_of_day === 'morning')   conditions.push(`(${hour} >= 7  AND ${hour} < 12)`);
+    if (q.time_of_day === 'afternoon') conditions.push(`(${hour} >= 12 AND ${hour} < 18)`);
+    if (q.time_of_day === 'evening')   conditions.push(`(${hour} >= 18 AND ${hour} < 22)`);
+  }
   if (q.dateFrom)  { conditions.push('created_at >= @dateFrom'); params.dateFrom = q.dateFrom; }
   if (q.dateTo)    { conditions.push('created_at <= @dateTo');   params.dateTo = q.dateTo; }
 

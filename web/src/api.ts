@@ -24,7 +24,8 @@ export async function fetchEvents(
                            params.set('downloaded',  filters.downloaded);
   if (filters.favorited  !== undefined && filters.favorited  !== '')
                            params.set('favorited',   filters.favorited);
-  if (filters.show_deleted) params.set('show_deleted', 'true');
+  if (filters.show_deleted)  params.set('show_deleted',  'true');
+  if (filters.time_of_day)   params.set('time_of_day',   filters.time_of_day);
   if (filters.sort_by)  params.set('sort_by',  filters.sort_by);
   if (filters.sort_dir) params.set('sort_dir', filters.sort_dir);
   if (filters.date_from)  params.set('date_from',   String(new Date(filters.date_from).getTime() / 1000));

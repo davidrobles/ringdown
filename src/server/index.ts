@@ -54,6 +54,7 @@ export async function startServer(port: number, outputDir: string): Promise<void
       downloaded:    typeof q.downloaded === 'string' && q.downloaded !== '' ? Number(q.downloaded) : undefined,
       favorited:     typeof q.favorited  === 'string' && q.favorited  !== '' ? Number(q.favorited)  : undefined,
       show_deleted:  q.show_deleted === 'true',
+      time_of_day:   typeof q.time_of_day === 'string' && q.time_of_day ? q.time_of_day as import('../db.js').TimeOfDay : undefined,
       dateFrom:   typeof q.date_from  === 'string' && q.date_from  ? Number(q.date_from) : undefined,
       dateTo:     typeof q.date_to    === 'string' && q.date_to    ? Number(q.date_to)   : undefined,
       sort_by:    typeof q.sort_by    === 'string' ? q.sort_by as 'created_at' | 'duration' | 'file_size' : undefined,
