@@ -37,6 +37,8 @@ export interface Filters {
   downloaded: string;
   favorited: string;
   show_deleted: boolean;
+  sort_by: 'created_at' | 'duration' | 'file_size';
+  sort_dir: 'asc' | 'desc';
   date_from: string;
   date_to: string;
 }

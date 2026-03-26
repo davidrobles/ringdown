@@ -157,6 +157,8 @@ export interface EventsQuery {
   show_deleted?: boolean;
   dateFrom?: number;
   dateTo?: number;
+  sort_by?: 'created_at' | 'duration' | 'file_size';
+  sort_dir?: 'asc' | 'desc';
   limit?: number;
   offset?: number;
 }
@@ -181,9 +183,12 @@ export function queryEvents(q: EventsQuery): { events: DbEvent[]; total: number 
   const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
   const limit = q.limit ?? 50;
   const offset = q.offset ?? 0;
+  const validSortCols = new Set(['created_at', 'duration', 'file_size']);
+  const sortCol = validSortCols.has(q.sort_by ?? '') ? q.sort_by : 'created_at';
+  const sortDir = q.sort_dir === 'asc' ? 'ASC' : 'DESC';
 
   const total = (db.prepare(`SELECT COUNT(*) as n FROM events ${where}`).get(params) as { n: number }).n;
-  const events = db.prepare(`SELECT * FROM events ${where} ORDER BY created_at DESC LIMIT @limit OFFSET @offset`)
+  const events = db.prepare(`SELECT * FROM events ${where} ORDER BY ${sortCol} ${sortDir} NULLS LAST LIMIT @limit OFFSET @offset`)
     .all({ ...params, limit, offset }) as DbEvent[];
 
   return { events, total };

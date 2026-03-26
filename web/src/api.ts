@@ -25,6 +25,8 @@ export async function fetchEvents(
   if (filters.favorited  !== undefined && filters.favorited  !== '')
                            params.set('favorited',   filters.favorited);
   if (filters.show_deleted) params.set('show_deleted', 'true');
+  if (filters.sort_by)  params.set('sort_by',  filters.sort_by);
+  if (filters.sort_dir) params.set('sort_dir', filters.sort_dir);
   if (filters.date_from)  params.set('date_from',   String(new Date(filters.date_from).getTime() / 1000));
   if (filters.date_to)    params.set('date_to',     String(new Date(filters.date_to).getTime() / 1000 + 86399));
   params.set('limit',  String(limit));

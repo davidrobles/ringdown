@@ -54,10 +54,12 @@ export async function startServer(port: number, outputDir: string): Promise<void
       downloaded:    typeof q.downloaded === 'string' && q.downloaded !== '' ? Number(q.downloaded) : undefined,
       favorited:     typeof q.favorited  === 'string' && q.favorited  !== '' ? Number(q.favorited)  : undefined,
       show_deleted:  q.show_deleted === 'true',
-      dateFrom:   typeof q.date_from === 'string' && q.date_from ? Number(q.date_from) : undefined,
-      dateTo:     typeof q.date_to   === 'string' && q.date_to   ? Number(q.date_to)   : undefined,
-      limit:      typeof q.limit     === 'string' && q.limit     ? Number(q.limit)     : 50,
-      offset:     typeof q.offset    === 'string' && q.offset    ? Number(q.offset)    : 0,
+      dateFrom:   typeof q.date_from  === 'string' && q.date_from  ? Number(q.date_from) : undefined,
+      dateTo:     typeof q.date_to    === 'string' && q.date_to    ? Number(q.date_to)   : undefined,
+      sort_by:    typeof q.sort_by    === 'string' ? q.sort_by as 'created_at' | 'duration' | 'file_size' : undefined,
+      sort_dir:   typeof q.sort_dir   === 'string' ? q.sort_dir as 'asc' | 'desc' : undefined,
+      limit:      typeof q.limit      === 'string' && q.limit      ? Number(q.limit)     : 50,
+      offset:     typeof q.offset     === 'string' && q.offset     ? Number(q.offset)    : 0,
     });
   });
 

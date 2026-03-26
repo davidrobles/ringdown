@@ -94,6 +94,28 @@ export default function FiltersPanel({ filters, devices, onChange, onReset }: Pr
           <input type="date" className={input} value={filters.date_to} onChange={set('date_to')} />
         </div>
 
+        <div>
+          <label className={label}>Sort by</label>
+          <div className="flex gap-2">
+            <select
+              className={select}
+              value={filters.sort_by}
+              onChange={(e) => onChange({ ...filters, sort_by: e.target.value as Filters['sort_by'] })}
+            >
+              <option value="created_at">Date</option>
+              <option value="duration">Duration</option>
+              <option value="file_size">File size</option>
+            </select>
+            <button
+              onClick={() => onChange({ ...filters, sort_dir: filters.sort_dir === 'desc' ? 'asc' : 'desc' })}
+              className="shrink-0 px-2 rounded-md bg-zinc-800 border border-zinc-700 text-zinc-300 hover:text-white hover:border-zinc-500 transition-colors text-sm"
+              title={filters.sort_dir === 'desc' ? 'Descending' : 'Ascending'}
+            >
+              {filters.sort_dir === 'desc' ? '↓' : '↑'}
+            </button>
+          </div>
+        </div>
+
         <label className="flex items-center gap-2 cursor-pointer group">
           <input
             type="checkbox"
