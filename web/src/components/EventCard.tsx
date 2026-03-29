@@ -79,7 +79,7 @@ export default function EventCard({ event, onClick, onFavorite }: Props) {
         <button
           onClick={handleFavorite}
           aria-label={event.favorited ? 'Remove from favorites' : 'Add to favorites'}
-          className="absolute top-2 left-2 opacity-0 group-hover:opacity-100 transition-opacity"
+          className="absolute top-2 left-2"
         >
           {event.favorited ? (
             <svg className="w-5 h-5 text-red-500 drop-shadow" viewBox="0 0 24 24" fill="currentColor">
